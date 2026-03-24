@@ -538,17 +538,7 @@
 
   async function fetchSuggest(q) {
     try {
-      // 한글: 내장 매핑 테이블로 자동완성
-      if (hasKorean(q)) {
-        const key = q.toLowerCase().replace(/\s+/g, '');
-        const seen = new Set();
-        const matches = Object.entries(KR_MAP)
-          .filter(([k, v]) => { if (seen.has(v)) return false; if (k.includes(key) || key.includes(k)) { seen.add(v); return true; } return false; })
-          .map(([name, sym]) => ({ symbol: sym, longname: name, quoteType: 'EQUITY', exchange: sym.endsWith('.KS') ? 'KSE' : sym.endsWith('.KQ') ? 'KOSDAQ' : 'US' }));
-        suggestItems = matches.slice(0, 8);
-        renderSuggest();
-        return;
-      }
+      // 한글·영문 모두 서버 API (퍼지 포함)
       const json = await apiFetch(API.search(q));
       suggestItems = (json?.quotes ?? []).filter(it => it.symbol);
       renderSuggest();
@@ -611,16 +601,19 @@
     try {
       let resolvedSymbol = symbol;
 
-      // 1차: 한글 → 내장 매핑 테이블 확인
-      const krMatch = lookupKrMap(raw);
-      if (krMatch) resolvedSymbol = krMatch;
+      // 1차: 종목명 입력 시 서버에서 티커 조회 (한글·오타 모두 처리)
+      if (hasKorean(raw) || !/^[A-Z0-9.\-]+$/.test(symbol)) {
+        const searchJson = await apiFetch(API.search(raw));
+        const first = (searchJson?.quotes ?? []).find(q => q.symbol);
+        if (first) resolvedSymbol = first.symbol;
+      }
 
       // 2차: 티커로 직접 조회
       let json = await apiFetch(API.quote(resolvedSymbol));
       let result = json?.chart?.result?.[0];
 
-      // 3차: 실패 시 Yahoo 검색으로 티커 찾기 (한글 포함 모든 입력)
-      if (!result) {
+      // 3차: 그래도 없으면 검색으로 재시도
+      if (!result && resolvedSymbol === symbol) {
         const searchJson = await apiFetch(API.search(raw));
         const first = (searchJson?.quotes ?? []).find(q => q.symbol);
         if (first) {

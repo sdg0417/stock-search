@@ -1,6 +1,1 @@
-{
-  "functions": {
-    "api/quote.py": { "runtime": "vercel-python@4.0.0" },
-    "api/search.py": { "runtime": "vercel-python@4.0.0" }
-  }
-}
+{}

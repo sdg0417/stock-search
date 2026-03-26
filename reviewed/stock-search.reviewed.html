@@ -1,0 +1,738 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주가 검색</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 24px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid #1e293b;
+      background: #1e293b;
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: #60a5fa; }
+    input::placeholder { color: #475569; }
+
+    button {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #3b82f6, #6d28d9);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 480px;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+
+    .chip {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid #1e293b;
+      background: #1e293b;
+      color: #94a3b8;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid #2d3748;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .stock-name { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
+    .stock-symbol { font-size: 0.82rem; color: #64748b; margin-top: 2px; }
+
+    .price-block { text-align: right; }
+    .price {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .change {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .up   { color: #34d399; }
+    .down { color: #f87171; }
+    .flat { color: #94a3b8; }
+
+    .divider {
+      height: 1px;
+      background: #2d3748;
+      margin: 20px 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-item label {
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-item span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    .market-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #2d3748;
+    }
+
+    .timestamp {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 16px;
+    }
+
+    #error-msg {
+      color: #f87171;
+      font-size: 0.88rem;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 3px solid #2d3748;
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 24px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .history-section {
+      width: 100%;
+      max-width: 480px;
+      margin-top: 24px;
+    }
+
+    .history-title {
+      font-size: 0.8rem;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .history-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .history-item {
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .history-item:hover {
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+
+    #suggest-box {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 60px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .suggest-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      gap: 12px;
+    }
+
+    .suggest-item:hover, .suggest-item.active {
+      background: #0f172a;
+    }
+
+    .suggest-left { display: flex; flex-direction: column; min-width: 0; }
+    .suggest-name { font-size: 0.88rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .suggest-symbol { font-size: 0.75rem; color: #64748b; }
+    .suggest-type {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #0f172a;
+      color: #64748b;
+      border: 1px solid #2d3748;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>주가 검색</h1>
+<p class="subtitle">종목명 또는 티커를 입력하세요 · Yahoo Finance 실시간 데이터</p>
+
+<div class="search-box" style="position:relative;flex-direction:column;gap:0">
+  <div style="display:flex;gap:8px;width:100%">
+    <input id="ticker-input" type="text" placeholder="예: Apple, AAPL, 삼성전자, 005930.KS" maxlength="40" autocomplete="off" />
+    <button id="search-btn">검색</button>
+  </div>
+  <div id="suggest-box"></div>
+</div>
+
+<div class="quick-chips">
+  <span class="chip" data-symbol="AAPL">🍎 Apple</span>
+  <span class="chip" data-symbol="TSLA">⚡ Tesla</span>
+  <span class="chip" data-symbol="NVDA">🟢 Nvidia</span>
+  <span class="chip" data-symbol="MSFT">🪟 Microsoft</span>
+  <span class="chip" data-symbol="005930.KS">📱 삼성전자</span>
+  <span class="chip" data-symbol="000660.KS">💾 SK하이닉스</span>
+  <span class="chip" data-symbol="035420.KS">🔍 NAVER</span>
+  <span class="chip" data-symbol="BTC-USD">₿ Bitcoin</span>
+</div>
+
+<div id="spinner" class="spinner"></div>
+<div id="error-msg"></div>
+<div id="result-card"></div>
+
+<div id="history-section" class="history-section" style="display:none">
+  <p class="history-title">최근 검색</p>
+  <div id="history-list" class="history-list"></div>
+</div>
+
+<script>
+  const input = document.getElementById('ticker-input');
+  const btn   = document.getElementById('search-btn');
+  const spinner = document.getElementById('spinner');
+  const errorMsg = document.getElementById('error-msg');
+  const card   = document.getElementById('result-card');
+  const suggestBox = document.getElementById('suggest-box');
+
+  let history = JSON.parse(localStorage.getItem('stock_history') || '[]');
+  let suggestItems = [];
+  let activeIdx = -1;
+  let suggestTimer = null;
+
+  // ── 이벤트 바인딩 (onclick 인라인 제거 → addEventListener) ──
+  btn.addEventListener('click', () => search());
+
+  // [C-1] 퀵칩: data-symbol 속성 + addEventListener (XSS 방지)
+  document.querySelectorAll('.chip[data-symbol]').forEach(el => {
+    el.addEventListener('click', () => quickSearch(el.dataset.symbol));
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { closeSuggest(); search(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); return; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); moveActive(-1); return; }
+    if (e.key === 'Escape')    { closeSuggest(); return; }
+  });
+
+  input.addEventListener('input', () => {
+    clearTimeout(suggestTimer);
+    const q = input.value.trim();
+    if (q.length < 1) { closeSuggest(); return; }
+    suggestTimer = setTimeout(() => fetchSuggest(q), 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-box')) closeSuggest();
+  });
+
+  renderHistory();
+
+  // ── 한국 종목 이름→티커 매핑 (중복 키 제거) ─────────────────
+  // [W-5] 중복 제거: 삼성전자(2회), 삼성sdi(2회), 한화솔루션(2회) → 각 1회로 통합
+  const KR_MAP = {
+    // 반도체·IT
+    '삼성전자':'005930.KS','삼성':'005930.KS',
+    'sk하이닉스':'000660.KS','하이닉스':'000660.KS',
+    '삼성전기':'009150.KS',
+    '삼성sdi':'006400.KS',
+    'lg이노텍':'011070.KS',
+    'lg디스플레이':'034220.KS',
+    '네패스':'033640.KQ',
+    '동진쎄미켐':'005290.KQ',
+    // 인터넷·플랫폼
+    '네이버':'035420.KS','naver':'035420.KS',
+    '카카오':'035720.KS',
+    '카카오뱅크':'323410.KS',
+    '카카오페이':'377300.KS',
+    '카카오게임즈':'293490.KQ',
+    '토스':'403570.KS','비바리퍼블리카':'403570.KS',
+    // 자동차·부품
+    '현대차':'005380.KS','현대자동차':'005380.KS',
+    '기아':'000270.KS','기아차':'000270.KS',
+    '현대모비스':'012330.KS',
+    '현대위아':'011210.KS',
+    '현대글로비스':'086280.KS',
+    '만도':'204320.KS',
+    '한온시스템':'018880.KS',
+    'hl만도':'204320.KS',
+    // 배터리·에너지
+    'lg에너지솔루션':'373220.KS','lg엔솔':'373220.KS',
+    'lg화학':'051910.KS',
+    'sk이노베이션':'096770.KS','sk에너지':'096770.KS',
+    'sk아이이테크놀로지':'361610.KS','skiet':'361610.KS',
+    '에코프로비엠':'247540.KQ',
+    '에코프로':'086520.KQ',
+    '포스코퓨처엠':'003670.KS',
+    '일진머티리얼즈':'020150.KS',
+    '천보':'278280.KQ',
+    // 철강·소재
+    '포스코':'005490.KS','posco':'005490.KS',
+    '포스코홀딩스':'005490.KS',
+    '현대제철':'004020.KS',
+    '고려아연':'010130.KS',
+    '영풍':'000670.KS',
+    'oci':'010060.KS',
+    // 통신
+    'sk텔레콤':'017670.KS','skt':'017670.KS',
+    'kt':'030200.KS',
+    'lg유플러스':'032640.KS','lgu+':'032640.KS',
+    // 전자·가전
+    'lg전자':'066570.KS',
+    'hd현대일렉트릭':'267260.KS',
+    // 금융·은행·보험
+    'kb금융':'105560.KS','kb':'105560.KS',
+    '신한지주':'055550.KS','신한':'055550.KS',
+    '하나금융':'086790.KS','하나':'086790.KS',
+    '우리금융':'316140.KS','우리':'316140.KS',
+    '기업은행':'024110.KS',
+    'bnk금융':'138930.KS',
+    'dg금융':'139130.KS',
+    '메리츠금융':'138040.KS',
+    '삼성생명':'032830.KS',
+    '삼성화재':'000810.KS',
+    '한화생명':'088350.KS',
+    'db손해보험':'005830.KS',
+    '현대해상':'001450.KS',
+    '키움증권':'039490.KQ',
+    '미래에셋증권':'006800.KS',
+    '한국금융지주':'071050.KS','한국투자증권':'071050.KS',
+    'nh투자증권':'005940.KS',
+    '삼성증권':'016360.KS',
+    '대신증권':'003540.KS',
+    // 건설·건자재
+    '삼성물산':'028260.KS',
+    '현대건설':'000720.KS',
+    'gs건설':'006360.KS',
+    '대우건설':'047040.KS',
+    'dl이앤씨':'375500.KS',
+    '한화건설':'009440.KS',
+    '삼성엔지니어링':'028050.KS',
+    'hdec':'012630.KS','hd현대건설':'012630.KS',
+    '대림산업':'000210.KS',
+    // 그룹지주·대기업
+    'sk':'034730.KS','sk주식회사':'034730.KS',
+    'lg':'003550.KS','lg주식회사':'003550.KS',
+    'gs':'078930.KS','gs홀딩스':'078930.KS',
+    '한화':'000880.KS',
+    '한화솔루션':'009830.KS',
+    '한화에어로스페이스':'012450.KS',
+    '한화시스템':'272210.KS',
+    'hd현대':'267250.KS',
+    '두산':'000150.KS',
+    '두산에너빌리티':'034020.KS',
+    '두산밥캣':'241560.KS',
+    '두산퓨얼셀':'336260.KS',
+    'ls':'006260.KS',
+    // 유통·소비재
+    '이마트':'139480.KS',
+    '신세계':'004170.KS',
+    '롯데쇼핑':'023530.KS',
+    '현대백화점':'069960.KS',
+    'gs리테일':'007070.KS',
+    'cj제일제당':'097950.KS','cj':'001040.KS',
+    'cj대한통운':'000120.KS',
+    'cjenm':'035760.KS',
+    '농심':'004370.KS',
+    '오리온':'271560.KS',
+    '하이트진로':'000080.KS',
+    '롯데칠성':'005300.KS',
+    'kt&g':'033780.KS',
+    '아모레퍼시픽':'090430.KS',
+    'lg생활건강':'051900.KS',
+    // 물류·운송·항공
+    '대한항공':'003490.KS',
+    '아시아나항공':'020560.KS',
+    '한진칼':'180640.KS',
+    '제주항공':'089590.KS',
+    '진에어':'272450.KS',
+    '팬오션':'028670.KS',
+    'hmmco':'011200.KS','hmm':'011200.KS','현대상선':'011200.KS',
+    '한국해양진흥공사':'011200.KS',
+    // 게임·엔터
+    '엔씨소프트':'036570.KS','엔씨':'036570.KS',
+    '넷마블':'251270.KS',
+    '크래프톤':'259960.KS',
+    '펄어비스':'263750.KQ',
+    '컴투스':'078340.KQ',
+    '위메이드':'112040.KQ',
+    '하이브':'352820.KS','빅히트':'352820.KS',
+    'sm엔터테인먼트':'041510.KQ','sm':'041510.KQ',
+    'jyp엔터테인먼트':'035900.KQ','jyp':'035900.KQ',
+    'yg엔터테인먼트':'122870.KQ','yg':'122870.KQ',
+    // 바이오·제약
+    '삼성바이오로직스':'207940.KS',
+    '셀트리온':'068270.KS',
+    '셀트리온헬스케어':'091990.KQ',
+    '유한양행':'000100.KS',
+    '한미약품':'128940.KS',
+    '녹십자':'006280.KS',
+    '종근당':'001630.KS',
+    '대웅제약':'069620.KS',
+    'hlb':'028300.KQ',
+    '알테오젠':'196170.KQ',
+    '에이비엘바이오':'298380.KQ',
+    '리가켐바이오':'141080.KQ',
+    // 타이어·화학
+    '한국타이어':'161390.KS',
+    '금호타이어':'073240.KS',
+    '롯데케미칼':'011170.KS',
+    's-oil':'010950.KS','에쓰오일':'010950.KS',
+    // 미국·글로벌 (한국어명)
+    '애플':'AAPL','테슬라':'TSLA','엔비디아':'NVDA',
+    '마이크로소프트':'MSFT','구글':'GOOGL','알파벳':'GOOGL',
+    '아마존':'AMZN','메타':'META','넷플릭스':'NFLX',
+    '팔란티어':'PLTR','아크':'ARKK',
+    // 암호화폐
+    '비트코인':'BTC-USD','이더리움':'ETH-USD','리플':'XRP-USD',
+    '솔라나':'SOL-USD','도지코인':'DOGE-USD',
+  };
+
+  function hasKorean(s) { return /[\uac00-\ud7a3]/.test(s); }
+
+  // [W-3] lookupKrMap — 정확 일치만 수행.
+  //        부분 일치는 fetchSuggest(자동완성)에서만 허용.
+  //        'sk' 같은 짧은 키워드가 의도치 않은 종목으로 매핑되는 문제 방지.
+  function lookupKrMap(q) {
+    const key = q.toLowerCase().replace(/\s+/g, '');
+    return KR_MAP[key] ?? null;
+  }
+
+  // ── API 엔드포인트 설정 ──────────────────────────────────────
+  // [C-2] IS_LOCAL 분기 제거 — 로컬·프로덕션 모두 /api/ 경유.
+  //        프로덕션에서 Yahoo를 직접 호출하면:
+  //        1) CORS 차단 발생, 2) 한국 주식 서버 검색이 완전히 비활성화됨.
+  const API = {
+    quote:  symbol => `/api/quote/${encodeURIComponent(symbol)}`,
+    search: q      => `/api/search?q=${encodeURIComponent(q)}`,
+  };
+
+  // [I-2] AbortSignal.timeout() 호환성 문제 해결 — AbortController + setTimeout 사용
+  function fetchWithTimeout(url, ms = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  }
+
+  async function apiFetch(url) {
+    const res = await fetchWithTimeout(url, 8000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function fetchSuggest(q) {
+    try {
+      // [C-2] 한국어 자동완성도 /api/search 경유 — 서버의 kr_stocks.json(2,769개) 활용.
+      //        KR_MAP(~200개) 클라이언트 필터 대신 서버 검색 결과를 사용.
+      const json = await apiFetch(API.search(q));
+      suggestItems = (json?.quotes ?? []).filter(it => it.symbol);
+      renderSuggest();
+    } catch (e) {
+      // [I-1] 자동완성 실패는 UX 영향 최소화를 위해 무시하되 디버깅용 경고 출력
+      console.warn('[suggest]', e);
+    }
+  }
+
+  function renderSuggest() {
+    if (!suggestItems.length) { closeSuggest(); return; }
+    activeIdx = -1;
+    suggestBox.style.display = 'block';
+    // [C-1] suggest-item도 data-i + addEventListener로 처리
+    suggestBox.innerHTML = suggestItems.map((it, i) => {
+      const name = it.longname || it.shortname || it.symbol;
+      const typeLabel = { EQUITY:'주식', ETF:'ETF', MUTUALFUND:'펀드', CRYPTOCURRENCY:'암호화폐', INDEX:'지수', FUTURE:'선물', CURRENCY:'통화' }[it.quoteType] || it.quoteType || '';
+      return `<div class="suggest-item" data-i="${i}">
+        <div class="suggest-left">
+          <span class="suggest-name">${escHtml(name)}</span>
+          <span class="suggest-symbol">${escHtml(it.symbol)} · ${escHtml(it.exchange||'')}</span>
+        </div>
+        <span class="suggest-type">${escHtml(typeLabel)}</span>
+      </div>`;
+    }).join('');
+
+    suggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', () => pickSuggest(Number(el.dataset.i)));
+    });
+  }
+
+  function moveActive(dir) {
+    if (!suggestItems.length) return;
+    activeIdx = Math.max(-1, Math.min(suggestItems.length - 1, activeIdx + dir));
+    [...suggestBox.querySelectorAll('.suggest-item')].forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    if (activeIdx >= 0) input.value = suggestItems[activeIdx].symbol;
+  }
+
+  function pickSuggest(i) {
+    input.value = suggestItems[i].symbol;
+    closeSuggest();
+    search();
+  }
+
+  function closeSuggest() {
+    suggestBox.style.display = 'none';
+    suggestItems = [];
+    activeIdx = -1;
+  }
+
+  // ── 검색 ──────────────────────────────────────────────────
+  function quickSearch(symbol) {
+    input.value = symbol;
+    closeSuggest();
+    search();
+  }
+
+  async function search() {
+    const raw = input.value.trim();
+    if (!raw) return;
+    const symbol = raw.toUpperCase();
+
+    card.innerHTML = '';
+    errorMsg.textContent = '';
+    spinner.style.display = 'block';
+    btn.disabled = true;
+
+    try {
+      let resolvedSymbol = symbol;
+
+      const krMatch = lookupKrMap(raw);
+      if (krMatch) resolvedSymbol = krMatch;
+
+      let json = await apiFetch(API.quote(resolvedSymbol));
+      let result = json?.chart?.result?.[0];
+
+      if (!result) {
+        const searchJson = await apiFetch(API.search(raw));
+        const first = (searchJson?.quotes ?? []).find(q => q.symbol);
+        if (first) {
+          resolvedSymbol = first.symbol;
+          json = await apiFetch(API.quote(resolvedSymbol));
+          result = json?.chart?.result?.[0];
+        }
+      }
+
+      if (!result) {
+        throw new Error(`"${escHtml(raw)}" 에 해당하는 종목을 찾을 수 없습니다.`);
+      }
+
+      input.value = resolvedSymbol;
+      renderCard(result.meta, resolvedSymbol);
+      addHistory(resolvedSymbol);
+
+    } catch (e) {
+      errorMsg.textContent = e.message || '오류가 발생했습니다.';
+    } finally {
+      spinner.style.display = 'none';
+      btn.disabled = false;
+    }
+  }
+
+  function renderCard(meta, symbol) {
+    const price      = meta.regularMarketPrice ?? 0;
+    const prev       = meta.chartPreviousClose ?? meta.previousClose ?? price;
+    const change     = price - prev;
+    const changePct  = prev ? (change / prev) * 100 : 0;
+    const currency   = meta.currency ?? 'USD';
+    const name       = meta.longName || meta.shortName || symbol;
+    const exchange   = meta.fullExchangeName || meta.exchangeName || '';
+    const dayHigh    = meta.regularMarketDayHigh;
+    const dayLow     = meta.regularMarketDayLow;
+    const open       = meta.regularMarketOpen;
+    const vol        = meta.regularMarketVolume;
+    const cap52H     = meta.fiftyTwoWeekHigh;
+    const cap52L     = meta.fiftyTwoWeekLow;
+
+    const dir = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+    const arrow = change > 0 ? '▲' : change < 0 ? '▼' : '─';
+
+    const fmt = (n, d=2) => n != null ? n.toLocaleString('ko-KR', {minimumFractionDigits:d, maximumFractionDigits:d}) : '-';
+    const fmtVol = n => n != null ? (n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 1e4 ? (n/1e4).toFixed(0)+'만' : n.toLocaleString()) : '-';
+    const now = new Date().toLocaleString('ko-KR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+    card.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="stock-name">${escHtml(name)}</div>
+            <div class="stock-symbol">${escHtml(symbol)} <span class="market-badge">${escHtml(exchange)}</span></div>
+          </div>
+          <div class="price-block">
+            <div class="price ${dir}">${fmt(price)} <small style="font-size:0.5em;font-weight:400">${escHtml(currency)}</small></div>
+            <div class="change ${dir}">${arrow} ${fmt(Math.abs(change))} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%)</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="stats">
+          <div class="stat-item"><label>시가</label><span>${fmt(open)}</span></div>
+          <div class="stat-item"><label>전일 종가</label><span>${fmt(prev)}</span></div>
+          <div class="stat-item"><label>당일 고가</label><span class="up">${fmt(dayHigh)}</span></div>
+          <div class="stat-item"><label>당일 저가</label><span class="down">${fmt(dayLow)}</span></div>
+          <div class="stat-item"><label>52주 최고</label><span>${fmt(cap52H)}</span></div>
+          <div class="stat-item"><label>52주 최저</label><span>${fmt(cap52L)}</span></div>
+          <div class="stat-item"><label>거래량</label><span>${fmtVol(vol)}</span></div>
+          <div class="stat-item"><label>통화</label><span>${escHtml(currency)}</span></div>
+        </div>
+        <div class="timestamp">기준 시각: ${now}</div>
+      </div>`;
+  }
+
+  function escHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');   // [C-1] 단따옴표 이스케이프 추가
+  }
+
+  // [C-1] 히스토리: data-symbol 속성 + addEventListener (XSS 방지)
+  function addHistory(symbol) {
+    history = [symbol, ...history.filter(s => s !== symbol)].slice(0, 8);
+    localStorage.setItem('stock_history', JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('history-section');
+    const list    = document.getElementById('history-list');
+    if (!history.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = history.map(s =>
+      `<span class="history-item" data-symbol="${escHtml(s)}">${escHtml(s)}</span>`
+    ).join('');
+    list.querySelectorAll('.history-item[data-symbol]').forEach(el => {
+      el.addEventListener('click', () => quickSearch(el.dataset.symbol));
+    });
+  }
+</script>
+</body>
+</html>
